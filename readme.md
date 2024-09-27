@@ -38,8 +38,8 @@ This project is designed to scrape and process data from the FGB (Foclóir Gaeil
 
 2. Run the processing scripts:
     ```sh
-    python scrape_fgb_vns/process_json_data.py
-    python scrape_fgb_vns/process_json_data_r_root.py
+    python process_json_data.py
+    python process_json_data_r_root.py
     ```
 
 3. Move output to archive:
