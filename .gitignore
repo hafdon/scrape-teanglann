@@ -1,0 +1,8 @@
+.DS_Store
+
+archive/
+idea/
+venv/
+
+output.csv
+output.json
