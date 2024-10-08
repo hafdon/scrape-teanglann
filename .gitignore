@@ -4,6 +4,11 @@ archive/
 .idea/
 .venv/
 venv/
+.env
 
 output.csv
 output.json
+
+program.log
+
+words*
