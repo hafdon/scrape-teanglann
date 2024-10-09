@@ -59,8 +59,8 @@ def get_overview_definition(definition):
                         
                         Please return this as structured data.
                         
-                        example:
-                        { "word": "díon", "overview_definition": "(noun) a form of protection or shelter from elements and harm; (verb) to protect or cover something."}
+                        example:                    
+                        {"word":"doicheallach","adjective_definitions":"(1) churlish, inhospitable","verb_definitions":"(1) to be unwilling to receive someone; (2) to be churlish with someone; (3) to be grudging with something, unwilling to do something","noun_definitions":"(1) churlish, cold welcome; (2) grudging word, smile","other":"(phrase) he gave it grudgingly; (phrase) he is stand-offish in company."}
                         """,
                 },
                 {
@@ -76,9 +76,14 @@ def get_overview_definition(definition):
 
         # Parse the JSON response
         structured_data = json.loads(content)
-        overview = structured_data.get("overview_definition", "")
-        logging.debug(f"Received overview_definition: {overview}")
-        return overview
+        # overview = structured_data.get("overview_definition", "")
+        adjectives = structured_data.get("adjective_definitions", "")
+        verbs = structured_data.get("verb_definitions", "")
+        nouns = structured_data.get("noun_definitions", "")
+        other = structured_data.get("other", "")
+
+        logging.debug(f"structured_data: {structured_data}")
+        return (adjectives, verbs, nouns, other)
 
     except json.JSONDecodeError as jde:
         logging.error(f"JSON decoding failed: {jde}")
@@ -89,10 +94,17 @@ def get_overview_definition(definition):
         return None
 
 
+import csv
+import logging
+
+
 def main():
     base_url = "https://www.teanglann.ie/en/fgb"
     urls = []
     words = []
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 
     try:
         # Read words and construct URLs
@@ -113,43 +125,63 @@ def main():
     # List to hold final data
     final_data = []
 
-    # Iterate over each word and its corresponding URL
-    for word, url in zip(words, urls):
-        logging.info(f"Processing word: {word}")
-        definition = extract_definitions(url)
-        if not definition:
-            logging.warning(f"Skipping word '{word}' due to extraction failure.")
-            continue
-
-        overview_definition = get_overview_definition(definition)
-        if not overview_definition:
-            logging.warning(f"Skipping word '{word}' due to OpenAI API failure.")
-            continue
-
-        # Append to final data
-        final_data.append({"word": word, "overview_definition": overview_definition})
-        logging.info(f"Added overview_definition for word '{word}'")
-
-    if not final_data:
-        logging.warning("No data to export.")
-        return
-
-    # Export to CSV
-    csv_filename = "words_overview_definitions.csv"
-
     try:
-        with open(csv_filename, "w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = ["word", "overview_definition"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        # Iterate over each word and its corresponding URL
+        for word, url in zip(words, urls):
+            logging.info(f"Processing word: {word}")
+            definition = extract_definitions(url)
+            if not definition:
+                logging.warning(f"Skipping word '{word}' due to extraction failure.")
+                continue
 
-            writer.writeheader()
-            for entry in final_data:
-                writer.writerow(entry)
+            adjectives, verbs, nouns, other = get_overview_definition(definition)
+            if not adjectives and not nouns and not verbs and not other:
+                logging.warning(f"Skipping word '{word}' due to OpenAI API failure.")
+                continue
 
-        logging.info(f"Data successfully exported to {csv_filename}")
-
+            # Append to final data
+            final_data.append(
+                {
+                    "word": word,
+                    "adjectives": adjectives,
+                    "verbs": verbs,
+                    "nouns": nouns,
+                    "other": other,
+                }
+            )
+            logging.info(f"Added definitions for word '{word}'")
+    except KeyboardInterrupt:
+        logging.info("Process interrupted by user. Saving data collected so far.")
     except Exception as e:
-        logging.error(f"An error occurred while writing to '{csv_filename}': {e}")
+        logging.error(f"An unexpected error occurred: {e}")
+    finally:
+        if final_data:
+            # Export to CSV
+            csv_filename = "words_overview_definitions.csv"
+
+            try:
+                with open(csv_filename, "w", newline="", encoding="utf-8") as csvfile:
+                    fieldnames = [
+                        "word",
+                        "adjectives",
+                        "verbs",
+                        "nouns",
+                        "other",
+                    ]
+
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                    writer.writeheader()
+                    for entry in final_data:
+                        writer.writerow(entry)
+
+                logging.info(f"Data successfully exported to {csv_filename}")
+            except Exception as e:
+                logging.error(
+                    f"An error occurred while writing to '{csv_filename}': {e}"
+                )
+        else:
+            logging.warning("No data to export.")
 
 
 if __name__ == "__main__":
