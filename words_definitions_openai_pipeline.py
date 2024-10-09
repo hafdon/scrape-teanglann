@@ -3,10 +3,11 @@ from bs4 import BeautifulSoup
 import json
 import csv
 from openai import OpenAI
+import logging
+
 
 client = OpenAI()
 
-import logging
 
 # Configure logging
 logging.basicConfig(
@@ -94,17 +95,20 @@ def get_overview_definition(definition):
         return None
 
 
-import csv
-import logging
-
-
 def main():
     base_url = "https://www.teanglann.ie/en/fgb"
     urls = []
     words = []
 
     # Configure logging
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("app.log", encoding="utf-8"),
+            logging.StreamHandler(),
+        ],
+    )
 
     try:
         # Read words and construct URLs
@@ -128,32 +132,49 @@ def main():
     try:
         # Iterate over each word and its corresponding URL
         for word, url in zip(words, urls):
-            logging.info(f"Processing word: {word}")
-            definition = extract_definitions(url)
-            if not definition:
-                logging.warning(f"Skipping word '{word}' due to extraction failure.")
-                continue
+            try:
+                logging.info(f"Processing word: {word}")
+                definition = extract_definitions(url)
+                if not definition:
+                    logging.warning(
+                        f"Skipping word '{word}' due to extraction failure."
+                    )
+                    continue
 
-            adjectives, verbs, nouns, other = get_overview_definition(definition)
-            if not adjectives and not nouns and not verbs and not other:
-                logging.warning(f"Skipping word '{word}' due to OpenAI API failure.")
-                continue
+                # Ensure get_overview_definition returns a tuple
+                overview = get_overview_definition(definition)
+                if not overview:
+                    logging.warning(
+                        f"Skipping word '{word}' because get_overview_definition returned None."
+                    )
+                    continue
 
-            # Append to final data
-            final_data.append(
-                {
-                    "word": word,
-                    "adjectives": adjectives,
-                    "verbs": verbs,
-                    "nouns": nouns,
-                    "other": other,
-                }
-            )
-            logging.info(f"Added definitions for word '{word}'")
+                # Attempt to unpack the overview
+                try:
+                    adjectives, verbs, nouns, other = overview
+                except TypeError as te:
+                    logging.error(f"Error unpacking overview for word '{word}': {te}")
+                    continue
+
+                # Append to final data
+                final_data.append(
+                    {
+                        "word": word,
+                        "adjectives": adjectives,
+                        "verbs": verbs,
+                        "nouns": nouns,
+                        "other": other,
+                    }
+                )
+                logging.info(f"Added definitions for word '{word}'")
+            except Exception as e:
+                logging.error(f"An error occurred while processing word '{word}': {e}")
+                continue  # Continue with the next word
+
     except KeyboardInterrupt:
         logging.info("Process interrupted by user. Saving data collected so far.")
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
+        logging.error(f"An unexpected error occurred during processing: {e}")
     finally:
         if final_data:
             # Export to CSV
