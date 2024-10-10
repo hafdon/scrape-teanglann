@@ -11,4 +11,4 @@ output.json
 
 program.log
 
-words*
+*__pycache__*
