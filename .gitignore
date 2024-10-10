@@ -10,3 +10,5 @@ output.csv
 output.json
 
 program.log
+
+*__pycache__*
