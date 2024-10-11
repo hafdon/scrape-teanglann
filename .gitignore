@@ -3,12 +3,13 @@
 archive/
 .idea/
 .venv/
-venv/
 .env
 
 output.csv
 output.json
 
 program.log
+app.log
+
 
 *__pycache__*
