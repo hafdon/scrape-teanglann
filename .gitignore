@@ -8,6 +8,7 @@ archive/
 output.csv
 output*.json
 existing_urls.txt
+words.txt
 
 program.log
 app.log
