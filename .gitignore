@@ -6,7 +6,7 @@ archive/
 .env
 
 output.csv
-output.json
+output*.json
 
 program.log
 app.log
